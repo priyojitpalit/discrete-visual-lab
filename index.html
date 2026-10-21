@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0e1a2b">
+  <meta name="description" content="Explore 32 original, interactive discrete mathematics visualizations organized across seven chapters. No accounts, ads or subscriptions.">
+  <title>Discrete Visual Lab — Interactive Discrete Mathematics</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="data.js"></script>
+  <script defer src="visualizations.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar" aria-label="Chapter and section navigation">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="6" cy="20" r="4"/><circle cx="30" cy="7" r="4"/><circle cx="29" cy="29" r="4"/><circle cx="18" cy="18" r="4"/><path d="M9 19L16 18M20 16L27 8M21 21L27 27M9 21L26 28"/></svg></div>
+        <div><div class="brand-main">DISCRETE<span>LAB</span></div><div class="brand-sub">Ideas you can see.</div></div>
+      </div>
+      <div class="sidebar-overline">EXPLORE THE LIBRARY</div>
+      <label class="search-wrap"><span class="visually-hidden">Search animations</span><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg><input id="search" type="search" placeholder="Search concepts..." autocomplete="off"><kbd>/</kbd></label>
+      <div class="sidebar-summary"><span id="sidebarCount">32 explorations</span><span id="visitedCount">0 explored</span></div>
+      <nav id="chapters" aria-label="Chapters"></nav>
+      <div class="sidebar-footer"><div class="free-dot"></div><span>100% free • Works offline</span><a href="https://discrete.openmathbooks.org/dmoi4/frontmatter.html" target="_blank" rel="noopener noreferrer">Source book ↗</a></div>
+    </aside>
+    <div class="sidebar-dim" id="sidebarDim" hidden></div>
+    <main class="main" id="main">
+      <header class="topbar">
+        <div class="top-left"><button class="icon-button mobile-menu" id="mobileMenu" type="button" aria-label="Open chapter menu" aria-expanded="false">☰</button><span class="top-label"><span class="tiny-indicator"></span> THE INTERACTIVE MATHEMATICS STUDIO</span></div>
+        <div class="top-actions"><span class="counter" id="topCounter">01 <span>/</span> 32</span><a class="top-source" id="bookLink" href="https://discrete.openmathbooks.org/dmoi4/frontmatter.html" target="_blank" rel="noopener noreferrer">View textbook <span aria-hidden="true">↗</span></a></div>
+      </header>
+      <div class="page-content">
+        <div class="intro-kicker"><span class="pill-accent" id="chapterPill">CHAPTER 00</span><span class="kicker-divider"></span><span id="chapterName">FOUNDATIONS</span></div>
+        <div class="title-layout"><div><h1 id="lessonTitle">The Handshake Problem</h1><p class="lesson-desc" id="lessonDesc">Watch mathematics come to life.</p></div><div class="lesson-id" id="sectionBadge">§ 0.1</div></div>
+        <section class="lab" aria-label="Interactive animation">
+          <div class="stage-head"><div class="live-indicator"><span class="live-dot"></span> INTERACTIVE VISUALIZATION</div><div class="stage-meta"><span id="stagePosition">Frame 0 / 15</span><button type="button" class="stage-export" id="exportPng" title="Save the current diagram as a PNG image">Save image ↓</button></div></div>
+          <div class="canvas-wrap"><canvas id="labCanvas" width="960" height="480" role="img" aria-label="Animated mathematical visualization">This visualization requires a browser with Canvas support.</canvas></div>
+          <div class="transport">
+            <div class="player-primary"><button type="button" class="player-btn secondary" id="resetBtn" aria-label="Restart animation" title="Restart">↺</button><button type="button" class="player-btn secondary" id="prevBtn" aria-label="Previous step" title="Previous step">‹</button><button type="button" class="player-btn play" id="playBtn" aria-label="Play animation">▶ <span id="playLabel">Play animation</span></button><button type="button" class="player-btn secondary" id="nextBtn" aria-label="Next step" title="Next step">›</button></div>
+            <div class="transport-right"><label for="speed" class="speed-label">SPEED</label><select id="speed" aria-label="Animation speed"><option value="1600">0.5×</option><option value="900" selected>1×</option><option value="450">2×</option><option value="220">4×</option></select><span class="transport-divider"></span><span class="frame-counter" id="frameCounter">0 / 15</span></div>
+          </div>
+          <div class="timeline-area"><input type="range" id="timeline" min="0" max="15" value="0" step="1" aria-label="Animation frame"><div class="timeline-ends"><span>START</span><span>END</span></div></div>
+        </section>
+        <div class="below-grid">
+          <section class="control-panel" aria-labelledby="controlsTitle"><div class="section-head"><span class="small-heading"><span aria-hidden="true">◉</span> <span id="controlsTitle">Adjust the experiment</span></span><button type="button" id="defaultBtn" class="text-button">Restore defaults ↺</button></div><div id="parameterControls" class="parameter-controls"></div><div id="noControls" class="no-controls" hidden>This exploration uses a fixed example. Use the playback controls to inspect every step.</div></section>
+          <section class="insight-panel" aria-labelledby="insightTitle"><div class="section-head"><span class="small-heading" id="insightTitle"><span aria-hidden="true">✳</span> THINK ABOUT IT</span></div><p class="question" id="question">What pattern do you notice?</p><div class="formula-wrap"><span class="formula-label">KEY RELATION</span><p class="formula" id="formula"></p></div></section>
+        </div>
+        <div class="lesson-nav"><button id="previousLesson" class="lesson-nav-card" type="button"><span>← PREVIOUS EXPLORATION</span><strong id="previousName">—</strong></button><button id="nextLesson" class="lesson-nav-card right" type="button"><span>NEXT EXPLORATION →</span><strong id="nextName">—</strong></button></div>
+        <footer class="site-footer"><p>Original interactive illustrations aligned to the chapter structure of <a href="https://discrete.openmathbooks.org/dmoi4/frontmatter.html" target="_blank" rel="noopener noreferrer">Discrete Mathematics: An Open Introduction (4th ed.)</a> by Oscar Levin. This independent educational project is not affiliated with the author or publisher.</p><p>No paid services, external scripts, logins, or data collection. Keyboard: <kbd>←</kbd> <kbd>→</kbd> to step, <kbd>Space</kbd> to play.</p></footer>
+      </div>
+    </main>
+  </div>
+  <div class="toast" role="status" aria-live="polite" id="toast"></div>
+</body>
+</html>
