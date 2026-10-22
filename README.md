@@ -1,6 +1,6 @@
-# Discrete Mathematics — Spring Hill College
+# MTH 322: Discrete Mathematics — Spring Hill College
 
-Prepared by **Dr. Priyojit Palit** for the **Discrete Mathematics** course at **Spring Hill College**.
+Prepared by **Priyojit Palit** for **MTH 322: Discrete Mathematics** at **Spring Hill College**.
 
 **Website:** https://priyojitpalit.github.io/discrete-visual-lab/
 
