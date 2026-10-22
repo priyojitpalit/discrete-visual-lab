@@ -9,3 +9,12 @@
 .course-byline{font-size:15px;color:#63758a;margin:0 0 34px;line-height:1.6}
 .course-byline strong{color:#344c60;font-weight:700}
 @media(max-width:630px){.topbar-brand{font-size:9px;letter-spacing:.07em}.course-byline{margin-bottom:25px}}
+
+/* Course activity controls */
+.palette-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;font-size:12px;font-weight:700;color:#50667a}
+.palette-choice{width:36px;height:36px;border:2px solid #9eafb9;border-radius:50%;color:#182c38;font-weight:900}.palette-choice.chosen{outline:3px solid #244e65;outline-offset:2px}
+.math-recursion,.mapping-diagnostics{padding:17px 25px;border-top:1px solid #e0e8eb;background:#fafcfa;font-size:13px;color:#425866}.math-recursion ol{padding-left:23px}.math-recursion li{padding:3px 0}
+.mapping-diagnostics p{margin:7px 0}.mapping-legend{font-size:12px;color:#627789;margin:8px 0}.form-error{color:#b14b40;font-weight:700}
+.formula-builder{border:1px solid #dbe8df;border-radius:10px;padding:13px;margin:12px 0}.formula-builder strong{display:block;font-size:13px;margin-bottom:10px}.formula-fields{display:flex;gap:13px;flex-wrap:wrap;align-items:center;margin-bottom:11px}.formula-fields label{font-size:13px}
+.quotient-prompt{background:#ecf7f1;padding:14px;border:1px solid #cfe5d7;border-radius:10px;margin:14px 0}.quotient-prompt label{font-size:13px;font-weight:700;display:block;margin-bottom:9px}.quotient-prompt input{max-width:180px;border:1px solid #aac6ba;border-radius:7px;padding:10px;font:inherit}.math-note{font-size:13px;line-height:1.6;margin:8px 0;color:#486b56}.division-line{padding:7px 10px;border-bottom:1px solid #dfe9e6;font:600 13px ui-monospace,monospace}
+@media(max-width:600px){.palette-choice{min-width:38px}.math-recursion,.mapping-diagnostics{padding:16px}.formula-fields{gap:8px}}
