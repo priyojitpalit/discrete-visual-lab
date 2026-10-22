@@ -1,0 +1,10 @@
+/* Problem-generation controls, separate from the mathematical diagram. */
+.practice-toolbar{background:#f8fbfa;border-bottom:1px solid #dfe9e7;padding:18px 24px 16px;color:#294759}
+.practice-main{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.practice-field{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:750;color:#596e7b}
+.practice-field select{min-height:40px;border:1px solid #cbdcd8;background:#fff;border-radius:9px;padding:0 30px 0 10px;color:#294759}
+.practice-toolbar .btn{margin:0}
+.practice-code{margin-left:auto;border:1px solid #d3e1db;background:#fff;padding:6px 10px;border-radius:7px;color:#667781;font:700 12px ui-monospace,Consolas,monospace;letter-spacing:.04em}
+.practice-goal{font-size:12px;color:#506b72;margin:10px 0 0}
+.practice-notice:not(:empty){display:block;font-size:12px;color:#1b755d;margin-top:8px;overflow-wrap:anywhere}
+@media(max-width:650px){.practice-toolbar{padding:14px 16px}.practice-main{gap:8px}.practice-code{margin-left:0}.practice-field{width:100%;justify-content:space-between;margin-bottom:4px}.practice-main .btn{flex:1}}
