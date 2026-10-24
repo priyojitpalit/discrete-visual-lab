@@ -106,23 +106,42 @@
     stage.oncontextmenu=e=>{const node=e.target.closest('[data-node]');if(node){e.preventDefault();saveGraph();S.colors[Number(node.dataset.node)]=-1;paint();}};
   };
 
-  // Euler existence and Euler existence *from a selected start* are not the same claim.
+  // Predict Euler-trail existence before revealing the answer.
   const oldEuler=originalDraw.euler;
-  const startValid=()=>{const odd=eulerDegrees().map((d,i)=>d%2?i:-1).filter(x=>x>=0);return odd.length===0||(odd.length===2&&odd.includes(S.route[0]));};
+  const originalEulerInit=eulerInit;
+  eulerInit=function(name){
+    originalEulerInit(name);
+    S.trailChecked=false;
+    S.trailPrediction=null;
+  };
+  const oddVertices=()=>eulerDegrees().map((d,i)=>d%2?i:-1).filter(i=>i>=0);
+  const startValid=()=>{
+    const odd=oddVertices(),first=S.route[0];
+    return (odd.length===0||odd.length===2&&odd.includes(first)) &&
+      eulerSolution(first,[])!==null;
+  };
+  ACTIONS.euler.trailYes=()=>{S.trailPrediction=true;S.trailChecked=true;paint();};
+  ACTIONS.euler.trailNo=()=>{S.trailPrediction=false;S.trailChecked=true;paint();};
   DRAW.euler=()=>{
-    let html=oldEuler(),odd=eulerDegrees().map((d,i)=>d%2?i:-1).filter(x=>x>=0),remaining=S.e.length-S.used.length;
-    html=html.replace(/(<small>Trail possible<\/small><strong>)(?:Yes|No)(<\/strong>)/,'$1'+(startValid()&&!!eulerSolution(S.route.at(-1),S.used)?'Yes':'No')+'$2');
-    const reachable=new Set([S.route.at(-1)]),unused=S.e.map((x,i)=>({x,i})).filter(v=>!S.used.includes(v.i));let previous=-1;
-    while(reachable.size!==previous){previous=reachable.size;for(const v of unused)if(reachable.has(v.x[0])||reachable.has(v.x[1])){reachable.add(v.x[0]);reachable.add(v.x[1]);}}
-    const inaccessible=unused.filter(v=>!reachable.has(v.x[0])&&!reachable.has(v.x[1])).length;
+    let html=oldEuler();
+    const odd=oddVertices(),remaining=S.e.length-S.used.length;
+    const current=S.route.at(-1),answer=startValid(),continuation=eulerSolution(current,S.used);
+    const revealed=S.trailChecked||remaining===0;
+    const status=revealed?(answer?'Yes':'No'):'?';
+    html=html.replace(/(<small>Trail possible<\/small><strong>)(?:Yes|No)(<\/strong>)/,'$1'+status+'$2');
+    html=html.replace('Trail possible</small>','Trail from start</small>');
     let message;
-    if(remaining===0)message='All edges have been traversed exactly once.';
-    else if(odd.length>2)message='This graph has '+odd.length+' odd-degree vertices, so it has no Euler trail.';
-    else if(!startValid())message='An Euler trail exists, but not from '+letter(S.route[0])+'. Start at '+odd.map(letter).join(' or ')+'.';
-    else if(!eulerSolution(S.route.at(-1),S.used))message='This partial route cannot be completed. '+(inaccessible?inaccessible+' untraversed edge(s) are disconnected from your current vertex. ':'')+'Undo the last edge and take a different route.';
-    else message='Select an unused edge incident to '+letter(S.route.at(-1))+'.';
-    html=replaceReadout(html,safe(message)+'<br><strong>Path: '+S.route.map(letter).join(' → ')+'</strong>',!startValid()||odd.length>2);
-    html=replaceInsight(html,'The parity criterion','A connected graph has an Euler circuit if every vertex has even degree. An open Euler trail requires exactly two odd-degree vertices, and the route must begin at one of them. Crossing a bridge before finishing one side can prevent completion.');
+    if(remaining===0)message='You traversed every edge exactly once.';
+    else if(!S.trailChecked)message='Predict whether an Euler trail is possible from the selected starting vertex. Then try to construct one.';
+    else if(S.trailPrediction===answer){
+      if(!answer)message='Correct. '+(odd.length>2?'The graph has '+odd.length+' odd-degree vertices.':'An open trail must begin at an odd-degree vertex.');
+      else if(!continuation)message='Correct that a trail exists, but your partial route cannot be finished. Undo a move.';
+      else message='Correct. An Euler trail is possible from '+letter(S.route[0])+'.';
+    } else message='Not quite. '+(odd.length>2?'A connected graph with more than two odd-degree vertices has no Euler trail.':odd.length===2&&!odd.includes(S.route[0])?'An open Euler trail must start at one of the two odd-degree vertices.':'Check whether all unused edges can be reached from this starting point.');
+    const controls='<div class="euler-prediction"><strong>Euler trail from '+letter(S.route[0])+'?</strong> '+btn('trailYes','Yes',S.trailChecked&&S.trailPrediction===true?'selected':'')+btn('trailNo','No',S.trailChecked&&S.trailPrediction===false?'selected':'')+'</div>';
+    html=html.replace('<div class="buttons">',controls+'<div class="buttons">');
+    html=replaceReadout(html,safe(message)+'<br><strong>Route: '+S.route.map(letter).join(' → ')+'</strong>',S.trailChecked&&!answer);
+    html=replaceInsight(html,'Euler trails','For a connected graph, an Euler circuit requires every vertex to have even degree. An open Euler trail requires exactly two odd-degree vertices, and must begin at one of them. The choice of starting point matters.');
     return html;
   };
 
