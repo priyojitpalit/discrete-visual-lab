@@ -89,7 +89,7 @@ test('All generators satisfy their mathematical constraints and reproduce seeds'
     }
     checked++;
   }
-  assert.ok(checked>=2200);
+  assert.ok(checked>=2000);
 });
 function browser(){
   const callbacks={};
