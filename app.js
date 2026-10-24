@@ -44,7 +44,17 @@ window.addEventListener('hashchange',route);
 const EXPRESSIONS=[
  ['p → q',(p,q)=>!p||q],['q → p',(p,q)=>!q||p],['¬q → ¬p',(p,q)=>q||!p],['¬p → ¬q',(p,q)=>p||!q],
  ['¬(p ∧ q)',(p,q)=>!(p&&q)],['¬p ∨ ¬q',(p,q)=>!p||!q],['¬(p ∨ q)',(p,q)=>!(p||q)],['¬p ∧ ¬q',(p,q)=>!p&&!q],
- ['p ↔ q',(p,q)=>p===q],['(p → q) ∧ (q → p)',(p,q)=>(!p||q)&&(!q||p)],['p ∨ q',(p,q)=>p||q],['p ∧ q',(p,q)=>p&&q]
+ ['p ↔ q',(p,q)=>p===q],['(p → q) ∧ (q → p)',(p,q)=>(!p||q)&&(!q||p)],['p ∨ q',(p,q)=>p||q],['p ∧ q',(p,q)=>p&&q],
+ ['p',(p,q)=>p],['q',(p,q)=>q],['¬p',(p,q)=>!p],['¬q',(p,q)=>!q],
+ ['q ∧ p',(p,q)=>q&&p],['q ∨ p',(p,q)=>q||p],
+ ['p ∧ (q ∨ ¬q)',(p,q)=>p&&(q||!q)],
+ ['(p ∧ q) ∨ (p ∧ ¬q)',(p,q)=>(p&&q)||(p&&!q)],
+ ['¬(p → q)',(p,q)=>!(!p||q)],['p ∧ ¬q',(p,q)=>p&&!q],
+ ['(p ∧ q) ∨ (¬p ∧ ¬q)',(p,q)=>(p&&q)||(!p&&!q)],
+ ['¬(p ↔ q)',(p,q)=>p!==q],
+ ['(p ∨ q) ∧ (¬p ∨ ¬q)',(p,q)=>(p||q)&&(!p||!q)],
+ ['(p → q) ∧ ¬q',(p,q)=>(!p||q)&&!q],
+ ['(p ∨ q) ∧ (p ∨ ¬q)',(p,q)=>(p||q)&&(p||!q)]
 ];
 INIT.logic=()=>{S={left:0,right:2,p:true,q:false};};
 function logicRow(i){return [!!(i&2),!!(i&1)];}
