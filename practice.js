@@ -55,11 +55,22 @@
       const rate={easy:.09,medium:.16,hard:.23}[level];for(let a=0;a<200;a++){B.clear();for(let y=0;y<=h;y++)for(let x=0;x<=w;x++)if((x||y)&&(x!==w||y!==h)&&r()<rate)B.add(key(x,y));if(pathCount(w,h,B)>1)break;}
     }
     const count=pathCount(w,h,B);if((kind===0&&count!==0)||(kind===1&&count!==1)||(kind===2&&count<=1))throw Error('Invalid generated lattice path count');return {w,h,blocked:[...B],count,category:kind};}
-  function generateLogic(r,level,variant,expressions){const options=[];for(let i=0;i<expressions.length;i++)for(let j=i+1;j<expressions.length;j++){let diff=0;for(const [p,q] of [[false,false],[false,true],[true,false],[true,true]])if(expressions[i][1](p,q)!==expressions[j][1](p,q))diff++;options.push({left:i,right:j,diff});}
-    const kind=variant%3;let pool=options.filter(x=>kind===0?x.diff===0:kind===1?x.diff===1:x.diff>=2);
-    if(level==='easy'&&kind===2)pool=pool.filter(x=>x.diff>=2);
-    if(level==='hard'&&kind===1)pool=pool.filter(x=>x.diff===1);
-    if(!pool.length)throw Error('No logical-expression pairs for category');return pick(r,pool);}
+  function generateLogic(r,level,variant,expressions){
+    const easy=new Set([10,11,12,13,14,15,16,17]);
+    const options=[];
+    for(let i=0;i<expressions.length;i++)for(let j=i+1;j<expressions.length;j++){
+      let diff=0;
+      for(const [p,q] of [[false,false],[false,true],[true,false],[true,true]])
+        if(expressions[i][1](p,q)!==expressions[j][1](p,q))diff++;
+      if(level==='easy'&&(!easy.has(i)||!easy.has(j)))continue;
+      if(level==='medium'&&(i>=18||j>=18||(easy.has(i)&&easy.has(j))))continue;
+      if(level==='hard'&&i<18&&j<18)continue;
+      const kind=variant%3;
+      if((kind===0&&diff===0)||(kind===1&&diff===1)||(kind===2&&diff>=2))options.push({left:i,right:j,diff});
+    }
+    if(!options.length)throw Error('No logical-expression pairs for '+level+' category '+(variant%3));
+    return pick(r,options);
+  }
   function functionFlags(a,out){const im=new Set(a);return{injective:im.size===a.length,surjective:im.size===out,bijective:im.size===out&&im.size===a.length};}
   function generateFunctions(r,level,variant){const type=variant%4;const n=type===0?(level==='easy'?3:4):type===1?(level==='hard'?5:4):(level==='easy'?3:level==='medium'?4:5);let m,c=n,f=[];
     if(type===0){m=Math.min(5,n+1);f=shuffle(r,Array.from({length:m},(_,i)=>i)).slice(0,n);}
@@ -69,11 +80,28 @@
     c=level==='hard'?int(r,3,5):m;
     let g=Array.from({length:m},()=>int(r,0,c-1));if(level==='easy')g=Array.from({length:m},(_,i)=>i%c);
     const flags=functionFlags(f,m);const expected=[{injective:true},{surjective:true},{bijective:true},{injective:false,surjective:false}][type];if(Object.keys(expected).some(k=>flags[k]!==expected[k]))throw Error('Invalid generated function type');return{n,m,c,f,g,category:type};}
-  function generateEuclid(r,level,variant){const kind=variant%3;let a,b;
-    if(kind===0){for(let i=0;i<200;i++){a=int(r,12,144);b=int(r,12,144);if(gcd(a,b)===1)break;}}
-    else if(kind===1){let d=int(r,2,level==='hard'?12:8);let mx=Math.floor(144/d),x,y;do{x=int(r,Math.max(2,Math.ceil(12/d)),mx);y=int(r,Math.max(2,Math.ceil(12/d)),mx);}while(x===y||gcd(x,y)!==1);a=x*d;b=y*d;}
-    else {const fib=[[34,21],[55,34],[89,55],[144,89]];[a,b]=pick(r,level==='easy'?fib.slice(0,2):level==='medium'?fib.slice(1,3):fib.slice(2));}
-    if(r()<.5)[a,b]=[b,a];let steps=0,x=a,y=b;while(y){[x,y]=[y,x%y];steps++;}if(a<12||b<12||a>144||b>144||(kind===0&&x!==1)||(kind===1&&x<=1)||(kind===2&&steps<6))throw Error('Invalid Euclidean pair');return{a,b,gcd:x,steps,category:kind};}
+  function generateEuclid(r,level,variant){
+    const kind=variant%3;
+    // Complexity is measured by the number of Euclidean divisions.
+    const bands={easy:[[2,3],[2,3],[3,5]],medium:[[4,6],[4,6],[6,8]],hard:[[7,11],[6,11],[9,11]]};
+    const [minSteps,maxSteps]=bands[level][kind];
+    let candidates=[];
+    for(let a=12;a<=144;a++)for(let b=12;b<=144;b++){
+      if(a===b)continue;
+      const g=gcd(a,b);
+      if(kind===0&&g!==1)continue;
+      if(kind===1&&g===1)continue;
+      if(kind===2&&g!==1)continue;
+      let x=a,y=b,steps=0;
+      while(y){[x,y]=[y,x%y];steps++;}
+      if(steps<minSteps||steps>maxSteps)continue;
+      if(level==='easy'&&(a>70||b>70))continue;
+      if(level==='medium'&&(a>120||b>120))continue;
+      candidates.push({a,b,gcd:g,steps,category:kind});
+    }
+    if(!candidates.length)throw Error('No Euclidean pairs for '+level+' category '+kind);
+    return pick(r,candidates);
+  }
   function generateHanoi(r,level,variant){let n=level==='easy'?3:level==='medium'?4+variant%2:6;let pegs=[Array.from({length:n},(_,i)=>n-i),[],[]];
     if(level!=='easy'&&variant%3===2){const total=level==='medium'?int(r,5,8):int(r,10,20);let last=-1;for(let t=0;t<total;t++){let legal=[];for(let i=0;i<3;i++){if(!pegs[i].length)continue;for(let j=0;j<3;j++){if(i===j||(pegs[j].length&&pegs[j].at(-1)<pegs[i].at(-1)))continue;legal.push([i,j]);}}let options=legal.filter(([a,b])=>a!==last);if(!options.length)options=legal;const [from,to]=pick(r,options);pegs[to].push(pegs[from].pop());last=to;}
       if(pegs[2].length===n)pegs=[Array.from({length:n},(_,i)=>n-i),[],[]];
@@ -89,21 +117,34 @@
   function apply(lab,cfg){if(active!==lab)return;stop();const instance=generate(lab,cfg.level,cfg.seed,cfg.variant,EXPRESSIONS);
     if(lab==='color'){
       graphPresets['Generated problem']={n:instance.n,e:instance.e.map(e=>e.slice())};
-      colorInit('Generated problem');S.k=instance.chromatic;S.problemAnswer=instance.chromatic;
+      colorInit('Generated problem');
+      // The available palette must not disclose the verified minimum.
+      S.k=cfg.level==='hard'?4:3;
+      S.problemAnswer=instance.chromatic;
     } else if(lab==='euler'){
-      eulerPresets['Generated problem']={n:instance.n,e:instance.e.map(e=>e.slice()),start:instance.start};eulerInit('Generated problem');
+      eulerPresets['Generated problem']={n:instance.n,e:instance.e.map(e=>e.slice()),start:instance.start};
+      eulerInit('Generated problem');
     } else if(lab==='paths'){
-      S.w=instance.w;S.h=instance.h;S.blocked=new Set(instance.blocked);S.reveal=0;S.path=[[0,0]];S.mode='obstacle';
+      INIT.paths();
+      S.w=instance.w;S.h=instance.h;S.blocked=new Set(instance.blocked);
+      S.reveal=0;S.focus=0;S.path=[[0,0]];S.mode='obstacle';
     } else if(lab==='logic'){
+      INIT.logic();
       S.left=instance.left;S.right=instance.right;S.p=true;S.q=false;
+      S.seen=new Set();S.checkAll=false;S.result='';
     } else if(lab==='functions'){
-      S.n=instance.n;S.m=instance.m;S.c=instance.c;S.f=instance.f.slice();S.g=instance.g.slice();S.mode='composition';S.selected=null;S.trace=0;
+      INIT.functions();
+      S.n=instance.n;S.m=instance.m;S.c=instance.c;S.f=instance.f.slice();S.g=instance.g.slice();
+      S.mode='composition';S.selected=null;S.trace=0;S.identityError='';
     } else if(lab==='euclid'){
-      S.a=instance.a;S.b=instance.b;S.step=0;
+      INIT.euclid();
+      S.a=instance.a;S.b=instance.b;S.step=0;S.guess='';S.guessFeedback='';
     } else if(lab==='hanoi'){
-      hanoiInit(instance.n);S.pegs=instance.pegs.map(p=>p.slice());S.feedback='Move each disk to the right-hand peg. Only a smaller disk may be placed on a larger disk.';
+      hanoiInit(instance.n);
+      S.pegs=instance.pegs.map(p=>p.slice());S.showBest=false;
+      S.feedback='Move each disk to the right-hand peg. Only a smaller disk may be placed on a larger disk.';
     }
-    current[lab]={...cfg};paint();
+        current[lab]={...cfg};paint();
   }
   function start(lab,level,repeat){if(active!==lab)return;const base=current[lab];let cfg;if(repeat&&base)cfg={...base};else{const serial=(rounds[lab]??-1)+1;rounds[lab]=serial;cfg={level:level||base?.level||'medium',seed:newSeed(),variant:serial%CATEGORIES[lab]};}history.replaceState(null,'',location.pathname+location.search+makeTag(lab,cfg));apply(lab,cfg);}
   function restore(){const cfg=parseTag();if(cfg&&active===cfg.lab)apply(cfg.lab,cfg);else if(LAB.includes(active)){current[active]=null;paint();}}
