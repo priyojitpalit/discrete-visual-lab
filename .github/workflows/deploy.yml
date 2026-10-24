@@ -23,7 +23,9 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Run tests
+      - name: Check application syntax
+        run: node --check app.js
+      - name: Run mathematical and interaction regression tests
         run: node --test tests/site.test.cjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
