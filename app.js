@@ -200,3 +200,427 @@ document.addEventListener('change',e=>{let f=e.target.dataset.field;if(!f)return
  requestAnimationFrame(paint);});
 window.afterPaint=()=>{if(active==='color')colorPointer();if(active==='euler')eulerPointer();if(active==='paths')pathsPointer();if(active==='hanoi')hanoiPointer();if(active==='functions')functionsPointer();};
 route();
+
+/* Discrete Mathematics — reproducible problem generators.
+   All generators are deterministic for (topic, difficulty, variant, seed).
+   No server, account, external dependency or stored student data. */
+(function (root) {
+  'use strict';
+  const LEVELS = ['easy', 'medium', 'hard'];
+  const CATEGORIES = {logic:3,color:3,euler:3,paths:3,hanoi:3,functions:4,euclid:3};
+  const LAB = ['logic','color','euler','paths','hanoi','functions','euclid'];
+  const TITLE = {
+    logic:'Determine whether the formulas are equivalent.',
+    color:'Find a proper coloring with as few colors as possible.',
+    euler:'Determine whether the graph has an Euler trail, then try to construct one.',
+    paths:'Count the paths from START to FINISH, moving only right or down.',
+    hanoi:'Move all disks to the right-hand peg using legal moves.',
+    functions:'Classify f, g and their composition.',
+    euclid:'Find the greatest common divisor of the two side lengths.'
+  };
+  function normalizeSeed(x){return (Number(x)>>>0)||0x6d2b79f5;}
+  function rand(seed){let a=normalizeSeed(seed);return function(){a|=0;a=a+0x6d2b79f5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+  function source(seed,topic,level,variant){let a=normalizeSeed(seed);for(const c of topic+'|'+level+'|'+variant)a=Math.imul(a^c.charCodeAt(0),16777619)>>>0;return rand(a);}
+  function int(r,a,b){return a+Math.floor(r()*(b-a+1));}
+  function shuffle(r,a){a=a.slice();for(let i=a.length-1;i>0;i--){let j=int(r,0,i);[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function pick(r,a){return a[int(r,0,a.length-1)];}
+  function gcd(a,b){while(b)[a,b]=[b,a%b];return a;}
+  function pathCount(w,h,blocked){let d=Array.from({length:h+1},()=>Array(w+1).fill(0));for(let y=0;y<=h;y++)for(let x=0;x<=w;x++){if(blocked.has(x+','+y))continue;d[y][x]=(x===0&&y===0)?1:(x?d[y][x-1]:0)+(y?d[y-1][x]:0);}return d[h][w];}
+  function isConnected(n,E){if(!n)return false;const A=Array.from({length:n},()=>[]);for(const[a,b] of E){A[a].push(b);A[b].push(a);}const seen=new Set([0]),stack=[0];while(stack.length){let v=stack.pop();for(const u of A[v])if(!seen.has(u)){seen.add(u);stack.push(u);}}return seen.size===n;}
+  function oddVertices(n,E){const d=Array(n).fill(0);for(const[a,b] of E){d[a]++;d[b]++;}return d.map((x,i)=>x%2?i:-1).filter(i=>i>=0);}
+  function colorable(n,E,k){const adj=Array.from({length:n},()=>[]);for(const[a,b]of E){adj[a].push(b);adj[b].push(a);}const order=Array.from({length:n},(_,i)=>i).sort((a,b)=>adj[b].length-adj[a].length);let C=Array(n).fill(-1);function dfs(i){if(i===n)return true;const v=order[i],forbidden=new Set(adj[v].map(u=>C[u]).filter(z=>z>=0));for(let c=0;c<k;c++){if(forbidden.has(c))continue;C[v]=c;if(dfs(i+1))return true;C[v]=-1;}return false;}return dfs(0);}
+  function permuteGraph(r,n,edges){const permutation=shuffle(r,Array.from({length:n},(_,i)=>i));return edges.map(([a,b])=>[permutation[a],permutation[b]].sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);}
+  function generateColor(r,level,variant){const n=int(r,...({easy:[5,6],medium:[6,8],hard:[8,10]}[level]));const options={easy:[2,3,2],medium:[3,2,4],hard:[3,4,4]}[level];const k=options[variant%3],classes=Array.from({length:n},(_,i)=>i<k?i:int(r,0,k-1));let E=[];
+    for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)E.push([i,j]); // planted k-clique gives lower bound
+    for(let i=k;i<n;i++){const choices=Array.from({length:i},(_,j)=>j).filter(j=>classes[j]!==classes[i]);const j=pick(r,choices);E.push([j,i]);}
+    const density={easy:.20,medium:.35,hard:.50}[level];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(classes[i]!==classes[j]&&!E.some(([a,b])=>a===i&&b===j)&&r()<density)E.push([i,j]);
+    E=permuteGraph(r,n,E);if(!isConnected(n,E)||!colorable(n,E,k)||(k>1&&colorable(n,E,k-1)))throw Error('Invalid generated coloring graph');return {n,e:E,chromatic:k};}
+  function generateEuler(r,level,variant){const n=int(r,...({easy:[5,6],medium:[6,8],hard:[8,10]}[level]));const kind=variant%3;let E=[],next=0;
+    if(kind===0){ // circuit, an attached cycle makes the bridge-like choice interesting
+      let cycleN=n-2;for(let i=0;i<cycleN;i++)E.push([i,(i+1)%cycleN]);E.push([0,cycleN],[cycleN,cycleN+1],[cycleN+1,0]);next=n;
+    }else if(kind===1){ // trail, two odd vertices
+      const linked=n>=7&&r()<.5;
+      if(linked){const base=n-3;for(let i=0;i<base;i++)E.push([i,(i+1)%base]);E.push([0,base],[base,base+1],[base+1,base+2],[base+2,base]);}
+      else {const base=n-1;for(let i=0;i<base;i++)E.push([i,(i+1)%base]);E.push([int(r,0,base-1),base]);}
+    }else{ // impossibility: exactly four odd vertices
+      const base=n-2;for(let i=0;i<base;i++)E.push([i,(i+1)%base]);let a=int(r,0,base-1),b=(a+int(r,1,base-1))%base;E.push([a,base],[b,base+1]);
+    }
+    E=permuteGraph(r,n,E);const odd=oddVertices(n,E);if(!isConnected(n,E)||odd.length!==[0,2,4][kind])throw Error('Invalid generated Euler graph');
+    const start=odd.length===2?odd[0]:int(r,0,n-1);return {n,e:E,start,odd:odd.length,hasTrail:odd.length<=2};}
+  function generatePaths(r,level,variant){const sizes={easy:[[3,4],[3,4]],medium:[[4,6],[4,5]],hard:[[6,7],[5,6]]}[level];let w=int(r,...sizes[0]),h=int(r,...sizes[1]);let B=new Set(),kind=variant%3;const key=(x,y)=>x+','+y;
+    if(kind===0){ // no path: both entrances to the goal are blocked
+      B.add(key(w-1,h));B.add(key(w,h-1));
+      for(let y=0;y<=h;y++)for(let x=0;x<=w;x++)if((x||y)&&(x!==w||y!==h)&&!B.has(key(x,y))&&r()<.14)B.add(key(x,y));
+    }else if(kind===1){ // unique path: all nodes outside a monotone corridor blocked
+      let moves=shuffle(r,Array(w).fill('R').concat(Array(h).fill('D'))),x=0,y=0,P=new Set([key(0,0)]);for(const m of moves){if(m==='R')x++;else y++;P.add(key(x,y));}
+      for(let yy=0;yy<=h;yy++)for(let xx=0;xx<=w;xx++)if(!P.has(key(xx,yy)))B.add(key(xx,yy));
+    }else{ // multiple paths; rejection sample verified DP
+      const rate={easy:.09,medium:.16,hard:.23}[level];for(let a=0;a<200;a++){B.clear();for(let y=0;y<=h;y++)for(let x=0;x<=w;x++)if((x||y)&&(x!==w||y!==h)&&r()<rate)B.add(key(x,y));if(pathCount(w,h,B)>1)break;}
+    }
+    const count=pathCount(w,h,B);if((kind===0&&count!==0)||(kind===1&&count!==1)||(kind===2&&count<=1))throw Error('Invalid generated lattice path count');return {w,h,blocked:[...B],count,category:kind};}
+  function generateLogic(r,level,variant,expressions){
+    const easy=new Set([10,11,12,13,14,15,16,17]);
+    const options=[];
+    for(let i=0;i<expressions.length;i++)for(let j=i+1;j<expressions.length;j++){
+      let diff=0;
+      for(const [p,q] of [[false,false],[false,true],[true,false],[true,true]])
+        if(expressions[i][1](p,q)!==expressions[j][1](p,q))diff++;
+      if(level==='easy'&&(!easy.has(i)||!easy.has(j)))continue;
+      if(level==='medium'&&(i>=18||j>=18||(easy.has(i)&&easy.has(j))))continue;
+      if(level==='hard'&&i<18&&j<18)continue;
+      const kind=variant%3;
+      if((kind===0&&diff===0)||(kind===1&&diff===1)||(kind===2&&diff>=2))options.push({left:i,right:j,diff});
+    }
+    if(!options.length)throw Error('No logical-expression pairs for '+level+' category '+(variant%3));
+    return pick(r,options);
+  }
+  function functionFlags(a,out){const im=new Set(a);return{injective:im.size===a.length,surjective:im.size===out,bijective:im.size===out&&im.size===a.length};}
+  function generateFunctions(r,level,variant){const type=variant%4;const n=type===0?(level==='easy'?3:4):type===1?(level==='hard'?5:4):(level==='easy'?3:level==='medium'?4:5);let m,c=n,f=[];
+    if(type===0){m=Math.min(5,n+1);f=shuffle(r,Array.from({length:m},(_,i)=>i)).slice(0,n);}
+    if(type===1){m=n-1;f=shuffle(r,Array.from({length:n},(_,i)=>i<m?i:int(r,0,m-1)));}
+    if(type===2){m=n;f=shuffle(r,Array.from({length:n},(_,i)=>i));}
+    if(type===3){m=n;f=Array.from({length:n},(_,i)=>i%(m-1));f=shuffle(r,f);}
+    c=level==='hard'?int(r,3,5):m;
+    let g=Array.from({length:m},()=>int(r,0,c-1));if(level==='easy')g=Array.from({length:m},(_,i)=>i%c);
+    const flags=functionFlags(f,m);const expected=[{injective:true},{surjective:true},{bijective:true},{injective:false,surjective:false}][type];if(Object.keys(expected).some(k=>flags[k]!==expected[k]))throw Error('Invalid generated function type');return{n,m,c,f,g,category:type};}
+  function generateEuclid(r,level,variant){
+    const kind=variant%3;
+    // Complexity is measured by the number of Euclidean divisions.
+    const bands={easy:[[2,3],[2,3],[3,5]],medium:[[4,6],[4,6],[6,8]],hard:[[7,11],[6,11],[9,11]]};
+    const [minSteps,maxSteps]=bands[level][kind];
+    let candidates=[];
+    for(let a=12;a<=144;a++)for(let b=12;b<=144;b++){
+      if(a===b)continue;
+      const g=gcd(a,b);
+      if(kind===0&&g!==1)continue;
+      if(kind===1&&g===1)continue;
+      if(kind===2&&g!==1)continue;
+      let x=a,y=b,steps=0;
+      while(y){[x,y]=[y,x%y];steps++;}
+      if(steps<minSteps||steps>maxSteps)continue;
+      if(level==='easy'&&(a>70||b>70))continue;
+      if(level==='medium'&&(a>120||b>120))continue;
+      candidates.push({a,b,gcd:g,steps,category:kind});
+    }
+    if(!candidates.length)throw Error('No Euclidean pairs for '+level+' category '+kind);
+    return pick(r,candidates);
+  }
+  function generateHanoi(r,level,variant){let n=level==='easy'?3:level==='medium'?4+variant%2:6;let pegs=[Array.from({length:n},(_,i)=>n-i),[],[]];
+    if(level!=='easy'&&variant%3===2){const total=level==='medium'?int(r,5,8):int(r,10,20);let last=-1;for(let t=0;t<total;t++){let legal=[];for(let i=0;i<3;i++){if(!pegs[i].length)continue;for(let j=0;j<3;j++){if(i===j||(pegs[j].length&&pegs[j].at(-1)<pegs[i].at(-1)))continue;legal.push([i,j]);}}let options=legal.filter(([a,b])=>a!==last);if(!options.length)options=legal;const [from,to]=pick(r,options);pegs[to].push(pegs[from].pop());last=to;}
+      if(pegs[2].length===n)pegs=[Array.from({length:n},(_,i)=>n-i),[],[]];
+    }return{n,pegs};}
+  function generate(topic,level,seed,variant,expressions){if(!LAB.includes(topic))throw Error('Unknown topic '+topic);if(!LEVELS.includes(level))throw Error('Unknown difficulty '+level);variant=Math.max(0,Number(variant)||0)%CATEGORIES[topic];const r=source(seed,topic,level,variant);switch(topic){case'color':return generateColor(r,level,variant);case'euler':return generateEuler(r,level,variant);case'paths':return generatePaths(r,level,variant);case'logic':return generateLogic(r,level,variant,expressions);case'functions':return generateFunctions(r,level,variant);case'euclid':return generateEuclid(r,level,variant);case'hanoi':return generateHanoi(r,level,variant);}}
+  const api={generate,rand,source,gcd,pathCount,isConnected,oddVertices,colorable,functionFlags,LAB,LEVELS,CATEGORIES};root.DVLPractice=api;
+  // The pure generator above can also be tested in Node without a browser or site runtime.
+  if(typeof document==='undefined'||typeof DRAW==='undefined'||typeof LABS==='undefined')return;
+  const current={},rounds={},originalDraw={};
+  function newSeed(){try{const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);return bytes[0]||1;}catch(e){return (Date.now()^Math.floor(Math.random()*4294967296))>>>0;}}
+  function makeTag(lab,cfg){return '#'+lab+'?level='+cfg.level+'&seed='+normalizeSeed(cfg.seed).toString(16).padStart(8,'0')+'&variant='+cfg.variant;}
+  function parseTag(){const raw=location.hash.slice(1);let [lab,search='']=raw.split('?');if(!LAB.includes(lab))return null;const p=new URLSearchParams(search),level=p.get('level'),seedHex=p.get('seed'),variant=Number(p.get('variant'));if(!LEVELS.includes(level)||!/^[0-9a-f]{1,8}$/i.test(seedHex||'')||!Number.isInteger(variant)||variant<0||variant>100000)return null;return{lab,level,seed:parseInt(seedHex,16),variant:variant%CATEGORIES[lab]};}
+  function apply(lab,cfg){if(active!==lab)return;stop();const instance=generate(lab,cfg.level,cfg.seed,cfg.variant,EXPRESSIONS);
+    if(lab==='color'){
+      graphPresets['Generated problem']={n:instance.n,e:instance.e.map(e=>e.slice())};
+      colorInit('Generated problem');
+      // The available palette must not disclose the verified minimum.
+      S.k=cfg.level==='hard'?4:3;
+      S.problemAnswer=instance.chromatic;
+    } else if(lab==='euler'){
+      eulerPresets['Generated problem']={n:instance.n,e:instance.e.map(e=>e.slice()),start:instance.start};
+      eulerInit('Generated problem');
+    } else if(lab==='paths'){
+      INIT.paths();
+      S.w=instance.w;S.h=instance.h;S.blocked=new Set(instance.blocked);
+      S.reveal=0;S.focus=0;S.path=[[0,0]];S.mode='obstacle';
+    } else if(lab==='logic'){
+      INIT.logic();
+      S.left=instance.left;S.right=instance.right;S.p=true;S.q=false;
+      S.seen=new Set();S.checkAll=false;S.result='';
+    } else if(lab==='functions'){
+      INIT.functions();
+      S.n=instance.n;S.m=instance.m;S.c=instance.c;S.f=instance.f.slice();S.g=instance.g.slice();
+      S.mode='composition';S.selected=null;S.trace=0;S.identityError='';
+    } else if(lab==='euclid'){
+      INIT.euclid();
+      S.a=instance.a;S.b=instance.b;S.step=0;S.guess='';S.guessFeedback='';
+    } else if(lab==='hanoi'){
+      hanoiInit(instance.n);
+      S.pegs=instance.pegs.map(p=>p.slice());S.showBest=false;
+      S.feedback='Move each disk to the right-hand peg. Only a smaller disk may be placed on a larger disk.';
+    }
+        current[lab]={...cfg};paint();
+  }
+  function start(lab,level,repeat){if(active!==lab)return;const base=current[lab];let cfg;if(repeat&&base)cfg={...base};else{const serial=(rounds[lab]??-1)+1;rounds[lab]=serial;cfg={level:level||base?.level||'medium',seed:newSeed(),variant:serial%CATEGORIES[lab]};}history.replaceState(null,'',location.pathname+location.search+makeTag(lab,cfg));apply(lab,cfg);}
+  function restore(){const cfg=parseTag();if(cfg&&active===cfg.lab)apply(cfg.lab,cfg);else if(LAB.includes(active)){current[active]=null;paint();}}
+  function toolbar(lab){const cfg=current[lab],level=cfg?.level||'medium',tag=cfg?normalizeSeed(cfg.seed).toString(16).toUpperCase().padStart(8,'0'):'Example';
+    return '<div class="practice-toolbar" aria-label="Problem generation"><div class="practice-main"><label class="practice-field">Difficulty <select data-practice-level="'+lab+'" aria-label="Problem difficulty">'+LEVELS.map(l=>'<option value="'+l+'"'+(l===level?' selected':'')+'>'+l.charAt(0).toUpperCase()+l.slice(1)+'</option>').join('')+'</select></label><button type="button" class="btn primary" data-practice="new">New problem</button><button type="button" class="btn" data-practice="reset"'+(!cfg?' disabled':'')+'>Reset problem</button><button type="button" class="btn" data-practice="copy"'+(!cfg?' disabled':'')+'>Copy problem link</button><span class="practice-code" title="Reproducible problem identifier">'+tag+'</span></div><div class="practice-goal">'+TITLE[lab]+'</div><span class="practice-notice" id="practiceNotice" role="status" aria-live="polite"></span></div>';
+  }
+  for(const lab of LAB){originalDraw[lab]=DRAW[lab];DRAW[lab]=function(){let s=originalDraw[lab]();s=s.replace('<div class="studio-controls">',toolbar(lab)+'<div class="studio-controls">');if(lab==='color'&&current.color&&S.preset==='Generated problem'&&!S.solved){s=s.replace(/(<small>Chromatic number<\/small><strong>)[^<]+(<\/strong>)/,'$1?$2');}if(lab==='euclid'&&current.euclid&&S.step===0){s=s.replace(/(<small>gcd<\/small><strong>)[^<]+(<\/strong>)/,'$1?$2');}if(lab==='paths'&&current.paths&&S.reveal<(S.w+1)*(S.h+1)){s=s.replace(/(<small>Valid routes<\/small><strong>)[^<]+(<\/strong>)/,'$1?$2');}return s;};}
+  const oldRandom={color:ACTIONS.color.randomGraph,logic:ACTIONS.logic.randomLogic,functions:ACTIONS.functions.functionShuffle,euclid:ACTIONS.euclid.euclidRandom};
+  ACTIONS.color.randomGraph=()=>start('color');ACTIONS.logic.randomLogic=()=>start('logic');ACTIONS.functions.functionShuffle=()=>start('functions');ACTIONS.euclid.euclidRandom=()=>start('euclid');
+  // Existing built-in presets remain available. Generated presets are inserted only once used.
+  document.addEventListener('change',e=>{const lab=e.target.dataset.practiceLevel;if(lab&&LAB.includes(lab)){start(lab,e.target.value);}});
+  document.addEventListener('click',e=>{const el=e.target.closest('[data-practice]');if(!el)return;const lab=active;switch(el.dataset.practice){case'new':start(lab);break;case'reset':start(lab,null,true);break;case'copy':{const cfg=current[lab];if(!cfg)return;const url=location.origin+location.pathname+location.search+makeTag(lab,cfg);const status=document.getElementById('practiceNotice');if(navigator.clipboard?.writeText){navigator.clipboard.writeText(url).then(()=>{if(status)status.textContent='Link copied.';}).catch(()=>{if(status)status.textContent='Copy this URL: '+url;});}else if(status)status.textContent='Copy this URL: '+url;break;}}});
+  window.addEventListener('hashchange',()=>restore());
+  restore();paint();
+})(typeof globalThis!=='undefined'?globalThis:this);
+
+'use strict';
+// Course activity improvements: retain the underlying graph, path and search algorithms.
+(() => {
+  const originalInit = Object.fromEntries(Object.entries(INIT));
+  const originalDraw = Object.fromEntries(Object.entries(DRAW));
+  const originalAfterPaint = window.afterPaint;
+  const letter = n => String.fromCharCode(65+n);
+  const safe = s => esc(String(s));
+  const noticeBox = text => '<p class="math-note">'+text+'</p>';
+  const replaceReadout = (html, text, warn=false) => html.replace(/<div class="readout(?: [^"]*)?">[\s\S]*?<\/div>/, '<div class="readout'+(warn?' warning':' notice')+'">'+text+'</div>');
+  const replaceInsight = (html,title,body) => html.replace(/<aside class="insight-pane" id="insight">[\s\S]*?<\/aside>/,'<aside class="insight-pane" id="insight"><div class="small-head">MATHEMATICS</div><h3>'+title+'</h3><p>'+body+'</p></aside>');
+
+  // Remember the unfinished work when navigating between topics.
+  const saved = new Map();
+  const previousMode = mode;
+  mode = function(id){
+    if(active!=='home' && LABS.some(l=>l.id===active)) saved.set(active,S);
+    if(saved.has(id)){
+      stop();active=id;S=saved.get(id);S.autoplay=false;render();
+    }else previousMode(id);
+  };
+
+  // A truth-table row is revealed only after the assignment has been examined.
+  INIT.logic = () => {originalInit.logic();S.seen = new Set();S.checkAll=false;};
+  const oldLogicActions={...ACTIONS.logic};
+  const revealRow=i=>{S.seen.add(i);[S.p,S.q]=logicRow(i);paint();};
+  for(let i=0;i<4;i++) ACTIONS.logic['row'+i]=()=>revealRow(i);
+  ACTIONS.logic.toggleP=()=>{S.p=!S.p;S.seen.add((S.p?2:0)+(S.q?1:0));paint();};
+  ACTIONS.logic.toggleQ=()=>{S.q=!S.q;S.seen.add((S.p?2:0)+(S.q?1:0));paint();};
+  ACTIONS.logic.counterexample=()=>{
+    const i=[0,1,2,3].find(k=>{const [p,q]=logicRow(k);return EXPRESSIONS[S.left][1](p,q)!==EXPRESSIONS[S.right][1](p,q)});
+    if(i!==undefined){S.seen.add(i);S.result='Counterexample found: assignment '+(i+1)+'.';revealRow(i)}
+    else {S.result='No counterexample exists: the expressions agree on all four assignments.';S.checkAll=true;paint()}
+  };
+  ACTIONS.logic.randomLogic=()=>{S.left=Math.floor(Math.random()*EXPRESSIONS.length);do{S.right=Math.floor(Math.random()*EXPRESSIONS.length)}while(S.left===S.right);S.seen=new Set();S.checkAll=false;S.result='';paint();};
+  ACTIONS.logic.checkLogic=()=>{S.checkAll=true;S.result='All four assignments have been checked.';paint();};
+  ACTIONS.logic.addFormula=()=>{
+    const op=document.getElementById('logicOp').value;
+    const np=document.getElementById('logicNegP').checked,nq=document.getElementById('logicNegQ').checked,neg=document.getElementById('logicNegAll').checked;
+    const connect={'∧':(a,b)=>a&&b,'∨':(a,b)=>a||b,'→':(a,b)=>!a||b,'↔':(a,b)=>a===b}[op];
+    const label=(neg?'¬':'')+'('+(np?'¬':'')+'p '+op+' '+(nq?'¬':'')+'q)';
+    let idx=EXPRESSIONS.findIndex(x=>x[0]===label);
+    if(idx<0){EXPRESSIONS.push([label,(p,q)=>neg?!connect(np?!p:p,nq?!q:q):connect(np?!p:p,nq?!q:q)]);idx=EXPRESSIONS.length-1;}
+    S.right=idx;S.checkAll=false;S.seen=new Set();S.result='';paint();
+  };
+  DRAW.logic=()=>{
+    let html=originalDraw.logic();
+    const trs=[0,1,2,3].map(i=>{
+      const [p,q]=logicRow(i),seen=S.checkAll||S.seen.has(i),a=EXPRESSIONS[S.left][1](p,q),b=EXPRESSIONS[S.right][1](p,q);
+      const focus=(S.p===p&&S.q===q)?' class="focus"':'';
+      return '<tr'+focus+'><td><button data-act="row'+i+'">'+(p?'T':'F')+'</button></td><td><button data-act="row'+i+'">'+(q?'T':'F')+'</button></td><td>'+(seen?(a?'T':'F'):'?')+'</td><td>'+(seen?(b?'T':'F'):'?')+'</td><td>'+(seen?(a===b?'Equal':'Different'):'—')+'</td></tr>';
+    }).join('');
+    html=html.replace(/<tbody>[\s\S]*?<\/tbody>/,'<tbody>'+trs+'</tbody>');
+    const revealed=S.checkAll||S.seen.size===4;
+    const distinct=[0,1,2,3].filter(i=>{const [p,q]=logicRow(i);return EXPRESSIONS[S.left][1](p,q)!==EXPRESSIONS[S.right][1](p,q)});
+    html=replaceReadout(html,revealed?('<strong>'+(distinct.length?'Not equivalent. '+distinct.length+' counterexample assignment(s).':'Equivalent: every row agrees.')+'</strong>'):'Test the four assignments. A single disagreement disproves equivalence. '+safe(S.result||''));
+    html=replaceInsight(html,'Logical equivalence','Two propositions are equivalent precisely when they agree under every possible truth assignment. Examine each row before drawing a conclusion.');
+    html=html.replace('<div class="table-scroll">','<div class="buttons">'+btn('checkLogic','Check all assignments')+'</div><div class="formula-builder"><strong>Construct a formula for B</strong><div class="formula-fields"><label><input type="checkbox" id="logicNegP"> ¬p</label><label>Operator <select id="logicOp"><option>∧</option><option>∨</option><option>→</option><option>↔</option></select></label><label><input type="checkbox" id="logicNegQ"> ¬q</label><label><input type="checkbox" id="logicNegAll"> Negate result</label></div>'+btn('addFormula','Use formula as B')+'</div><div class="table-scroll">');
+    return html;
+  };
+
+  // Graph colors are deliberately chosen, not cycled; the solver respects pinned colors.
+  INIT.color=()=>{originalInit.color();S.activeColor=0;S.undo=[];S.showMinimum=false;S.tip='';};
+  const previousColorInit=colorInit;
+  colorInit=function(name){previousColorInit(name);S.activeColor=0;S.undo=[];S.showMinimum=false;S.tip='';};
+  const oldColor=originalDraw.color;
+  const saveGraph=()=>{S.undo??=[];S.undo.push({e:S.e.map(x=>x.slice()),colors:S.colors.slice()});if(S.undo.length>30)S.undo.shift();};
+  const prevColorActions={...ACTIONS.color};
+  ACTIONS.color.chooseErase=()=>{S.activeColor=-1;paint()};
+  ACTIONS.color.randomGraph=()=>{prevColorActions.randomGraph();S.activeColor=0;S.undo=[];S.showMinimum=false;S.tip='';paint();};
+  for(let i=0;i<5;i++)ACTIONS.color['choose'+i]=()=>{S.activeColor=i;paint()};
+  ACTIONS.color.undoGraph=()=>{const x=S.undo?.pop();if(x){S.e=x.e;S.colors=x.colors;S.tip='Last edit undone.';}S.hint=null;paint()};
+  ACTIONS.color.clearColor=()=>{saveGraph();S.colors.fill(-1);S.hint=null;S.showMinimum=false;S.tip='';paint()};
+  ACTIONS.color.solveColor=()=>{prevColorActions.solveColor();S.showMinimum=true;S.tip='This uses the minimum number of colors; smaller palettes have no valid coloring.';paint()};
+  ACTIONS.color.proveColor=()=>{S.showMinimum=true;const c=chromatic();S.tip='A coloring with '+c.k+' colors exists. Exact search finds no proper coloring with '+(c.k-1)+' colors.';paint()};
+  ACTIONS.color.hintColor=()=>{
+    if(conflicts().length){S.tip='Two adjacent vertices share a color. Recolor or erase one of them before requesting a hint.';S.hint=null;paint();return;}
+    const pinned=exactColor(S.n,S.e,S.k,S.colors);
+    if(!pinned.ok){S.tip='No valid completion preserves these assignments with '+S.k+' colors. Undo a choice or allow more colors.';S.hint=null;paint();return;}
+    let i=S.colors.findIndex(c=>c<0);
+    if(i<0){S.tip='Your coloring is complete.';S.hint=null;}else{S.hint=i;S.tip='Vertex '+letter(i)+' can use color '+(pinned.colors[i]+1)+' while preserving your current assignments.';}
+    paint();
+  };
+  DRAW.color=()=>{
+    let html=oldColor();const c=chromatic(),val=S.showMinimum?String(c.k):'?';
+    html=html.replace(/(<small>Chromatic number<\/small><strong>)\d+(<\/strong>)/,'$1'+val+'$2');
+    const palette='<div class="palette-controls"><span>Vertex color</span>'+Array.from({length:S.k},(_,i)=>'<button data-act="choose'+i+'" class="palette-choice '+(S.activeColor===i?'chosen':'')+'" style="background:'+COLORS[i]+'" aria-label="Choose color '+(i+1)+'" title="Color '+(i+1)+'">'+(S.activeColor===i?'✓':'')+'</button>').join('')+'<button data-act="chooseErase" class="btn '+(S.activeColor===-1?'selected':'')+'">Erase</button></div>';
+    html=html.replace('<div class="buttons">',palette+'<div class="buttons">'+btn('undoGraph','↶ Undo')+btn('proveColor','Check minimum colors'));
+    html=replaceReadout(html,'<strong>'+(conflicts().length?conflicts().length+' adjacent pair(s) share a color.':S.colors.every(x=>x>=0)?'All vertices colored. Check that adjacent vertices differ.':'Choose a color, then select a vertex.')+'</strong> '+safe(S.tip||''),conflicts().length>0);
+    html=replaceInsight(html,'Proper vertex coloring','A proper coloring gives different colors to endpoints of every edge. To prove the chromatic number is k, exhibit a coloring with k colors and show that no coloring with fewer than k exists.');
+    return html;
+  };
+  colorPointer=function(){
+    const stage=$('stage');let dragging=null,start=null,moved=false;
+    const coord=ev=>{const box=stage.querySelector('svg').getBoundingClientRect();return {x:(ev.clientX-box.left)*760/box.width,y:(ev.clientY-box.top)*470/box.height};};
+    stage.onpointerdown=e=>{const node=e.target.closest('[data-node]');if(!node)return;dragging=Number(node.dataset.node);start=coord(e);moved=false;stage.setPointerCapture?.(e.pointerId);};
+    stage.onpointermove=e=>{if(dragging===null)return;const p=coord(e);if(Math.hypot(p.x-start.x,p.y-start.y)>6)moved=true;if(!moved)return;
+      S.pos[dragging]={x:clamp(p.x,35,725),y:clamp(p.y,45,440)};
+      const node=stage.querySelector('g[data-node="'+dragging+'"]');if(!node)return;
+      const circ=node.querySelector('circle'),label=node.querySelector('text');circ.setAttribute('cx',S.pos[dragging].x);circ.setAttribute('cy',S.pos[dragging].y);label.setAttribute('x',S.pos[dragging].x);label.setAttribute('y',S.pos[dragging].y+6);
+      stage.querySelectorAll('[data-link]').forEach(link=>{const [a,b]=link.dataset.link.split('-').map(Number);link.querySelectorAll('line').forEach(line=>{line.setAttribute('x1',S.pos[a].x);line.setAttribute('y1',S.pos[a].y);line.setAttribute('x2',S.pos[b].x);line.setAttribute('y2',S.pos[b].y);});});
+    };
+    stage.onpointerup=e=>{if(dragging===null)return;const id=dragging;dragging=null;if(moved){paint();return;}
+      if(S.edgeMode){if(S.selected===null)S.selected=id;else if(S.selected!==id){saveGraph();const a=Math.min(id,S.selected),b=Math.max(id,S.selected),k=S.e.findIndex(x=>x[0]===a&&x[1]===b);if(k<0)S.e.push([a,b]);else S.e.splice(k,1);S.selected=null;S.colors.fill(-1);S.showMinimum=false;S.tip='Graph changed; previous coloring cleared.';}else S.selected=null;}
+      else {saveGraph();S.colors[id]=S.activeColor;S.tip='';}S.hint=null;paint();};
+    stage.oncontextmenu=e=>{const node=e.target.closest('[data-node]');if(node){e.preventDefault();saveGraph();S.colors[Number(node.dataset.node)]=-1;paint();}};
+  };
+
+  // Predict Euler-trail existence before revealing the answer.
+  const oldEuler=originalDraw.euler;
+  const originalEulerInit=eulerInit;
+  eulerInit=function(name){
+    originalEulerInit(name);
+    S.trailChecked=false;
+    S.trailPrediction=null;
+  };
+  const oddVertices=()=>eulerDegrees().map((d,i)=>d%2?i:-1).filter(i=>i>=0);
+  const startValid=()=>{
+    const odd=oddVertices(),first=S.route[0];
+    return (odd.length===0||odd.length===2&&odd.includes(first)) &&
+      eulerSolution(first,[])!==null;
+  };
+  ACTIONS.euler.trailYes=()=>{S.trailPrediction=true;S.trailChecked=true;paint();};
+  ACTIONS.euler.trailNo=()=>{S.trailPrediction=false;S.trailChecked=true;paint();};
+  DRAW.euler=()=>{
+    let html=oldEuler();
+    const odd=oddVertices(),remaining=S.e.length-S.used.length;
+    const current=S.route.at(-1),answer=startValid(),continuation=eulerSolution(current,S.used);
+    const revealed=S.trailChecked||remaining===0;
+    const status=revealed?(answer?'Yes':'No'):'?';
+    html=html.replace(/(<small>Trail possible<\/small><strong>)(?:Yes|No)(<\/strong>)/,'$1'+status+'$2');
+    html=html.replace('Trail possible</small>','Trail from start</small>');
+    let message;
+    if(remaining===0)message='You traversed every edge exactly once.';
+    else if(!S.trailChecked)message='Predict whether an Euler trail is possible from the selected starting vertex. Then try to construct one.';
+    else if(S.trailPrediction===answer){
+      if(!answer)message='Correct. '+(odd.length>2?'The graph has '+odd.length+' odd-degree vertices.':'An open trail must begin at an odd-degree vertex.');
+      else if(!continuation)message='Correct that a trail exists, but your partial route cannot be finished. Undo a move.';
+      else message='Correct. An Euler trail is possible from '+letter(S.route[0])+'.';
+    } else message='Not quite. '+(odd.length>2?'A connected graph with more than two odd-degree vertices has no Euler trail.':odd.length===2&&!odd.includes(S.route[0])?'An open Euler trail must start at one of the two odd-degree vertices.':'Check whether all unused edges can be reached from this starting point.');
+    const controls='<div class="euler-prediction"><strong>Euler trail from '+letter(S.route[0])+'?</strong> '+btn('trailYes','Yes',S.trailChecked&&S.trailPrediction===true?'selected':'')+btn('trailNo','No',S.trailChecked&&S.trailPrediction===false?'selected':'')+'</div>';
+    html=html.replace('<div class="buttons">',controls+'<div class="buttons">');
+    html=replaceReadout(html,safe(message)+'<br><strong>Route: '+S.route.map(letter).join(' → ')+'</strong>',S.trailChecked&&!answer);
+    html=replaceInsight(html,'Euler trails','For a connected graph, an Euler circuit requires every vertex to have even degree. An open Euler trail requires exactly two odd-degree vertices, and must begin at one of them. The choice of starting point matters.');
+    return html;
+  };
+
+  // The recurrence is constructed one cell at a time, rather than unveiling the answer.
+  INIT.paths=()=>{originalInit.paths();S.focus=0;};
+  const oldPaths=originalDraw.paths;
+  const oldPathActions={...ACTIONS.paths};
+  ACTIONS.paths.pathNext=()=>{S.reveal=clamp(S.reveal+1,0,(S.w+1)*(S.h+1));S.focus=Math.max(0,S.reveal-1);paint();};
+  ACTIONS.paths.pathAll=()=>{S.reveal=(S.w+1)*(S.h+1);S.focus=S.reveal-1;paint()};
+  ACTIONS.paths.pathReset=()=>{oldPathActions.pathReset();S.focus=0;};
+  DRAW.paths=()=>{
+    let html=oldPaths(),total=(S.w+1)*(S.h+1),finished=S.reveal>=total,dp=pathsDP(),x=S.focus%(S.w+1),y=Math.floor(S.focus/(S.w+1)),blocked=S.blocked.has(pathKey(x,y));
+    html=html.replace(/(<small>Valid routes<\/small><strong>)\d+(<\/strong>)/,'$1'+(finished?dp[S.h][S.w]:'?')+'$2');
+    html=html.replace(/(<small>No obstacles<\/small><strong>)\d+(<\/strong>)/,'$1'+(finished?binom(S.w+S.h,S.w):'?')+'$2');
+    let a=x>0?dp[y][x-1]:0,b=y>0?dp[y-1][x]:0;
+    const explanation=S.reveal===0?'Compute the number of routes to each cell, beginning at the start.':blocked?'The cell ('+x+','+y+') is blocked, so its count is 0.':x===0&&y===0?'Start cell (0,0): exactly one empty path arrives here.':'Cell ('+x+','+y+'): routes from the left ('+a+') + routes from above ('+b+') = '+dp[y][x]+'.';
+    html=replaceInsight(html,'The recurrence','For an open cell, paths(x,y) = paths(x−1,y) + paths(x,y−1). Blocked cells contribute zero. '+safe(explanation));
+    if(S.reveal>0){const cell=Math.min(67,Math.floor(365/Math.max(S.w,S.h))),offX=380-(S.w+1)*cell/2,offY=235-(S.h+1)*cell/2;
+      let boxes='';for(const [cx,cy] of [[x-1,y],[x,y-1]])if(cx>=0&&cy>=0){const a=offX+cx*cell,b=offY+cy*cell;boxes+='<rect x="'+a+'" y="'+b+'" width="'+(cell-3)+'" height="'+(cell-3)+'" rx="7" fill="none" stroke="#fac76b" stroke-width="4" stroke-dasharray="6 3" pointer-events="none"/>';}const xx=offX+x*cell,yy=offY+y*cell;boxes+='<rect x="'+xx+'" y="'+yy+'" width="'+(cell-3)+'" height="'+(cell-3)+'" rx="7" fill="none" stroke="#baf7cd" stroke-width="4" pointer-events="none"/>';
+      html=html.replace('</svg>','<g aria-hidden="true">'+boxes+'</g></svg>');
+    }
+    return html;
+  };
+  pathsPointer=function(){const stage=$('stage');stage.onclick=e=>{
+    const target=e.target.closest('[data-cell]');if(!target)return;const [x,y]=target.dataset.cell.split(',').map(Number),k=pathKey(x,y);
+    if(S.mode==='obstacle'){
+      if(k==='0,0'||k===pathKey(S.w,S.h))return;
+      if(S.blocked.has(k))S.blocked.delete(k);else S.blocked.add(k);
+      S.reveal=0;S.focus=0;S.path=[[0,0]];
+    }else{const [a,b]=S.path.at(-1);if(((x===a+1&&y===b)||(x===a&&y===b+1))&&!S.blocked.has(k))S.path.push([x,y]);}
+    paint();
+  };};
+
+  // Hanoi: display the proof by recursive decomposition, not merely a move count.
+  INIT.hanoi=()=>{originalInit.hanoi();S.showBest=false;};
+  const oldHanoi=originalDraw.hanoi;
+  const oldHanoiActions={...ACTIONS.hanoi};
+  ACTIONS.hanoi.hanoiHint=()=>{S.showBest=true;oldHanoiActions.hanoiHint();};
+  ACTIONS.hanoi.hanoiStep=()=>{S.showBest=true;oldHanoiActions.hanoiStep();};
+  ACTIONS.hanoi.hanoiReset=()=>{oldHanoiActions.hanoiReset();S.showBest=false;paint();};
+  DRAW.hanoi=()=>{
+    let html=oldHanoi(),on=S.pegs.findIndex(peg=>peg.includes(S.n)),n=S.n,minimum=Math.pow(2,n)-1;
+    html=html.replace(/(<small>Best from here<\/small><strong>)\d+(<\/strong>)/,'$1'+(S.showBest?hanoiSolve().length:'?')+'$2');
+    const phase=on===0?'1 — Transfer the top '+(n-1)+' disks from peg 1 to peg 2.':on===2?'3 — Transfer the '+(n-1)+' smaller disks from peg 2 to peg 3.':'An intermediate configuration: return the largest disk to the correct target peg.';
+    const panel='<div class="math-recursion"><strong>Recursive decomposition</strong><p>T('+n+') = 2T('+(n-1)+') + 1 = '+minimum+' moves (minimum from the starting state).</p><ol><li>Move '+(n-1)+' smaller disks to the auxiliary peg.</li><li>Move the largest disk to the destination peg.</li><li>Move '+(n-1)+' smaller disks onto it.</li></ol><p><strong>Current position of the largest disk:</strong> Peg '+(on+1)+'. '+phase+'</p></div>';
+    return html.replace('</section>',panel+'</section>');
+  };
+
+  // Explicitly show collisions and missing outputs; never silently resize sets.
+  const oldFn=originalDraw.functions;
+  ACTIONS.functions.functionIdentity=()=>{
+    if(S.n!==S.m||S.m!==S.c){S.identityError='Identity maps require equal cardinalities for A, B, and C. Change the set sizes to match.';paint();return;}
+    S.f=Array.from({length:S.n},(_,i)=>i);S.g=Array.from({length:S.m},(_,i)=>i);S.mode='composition';S.selected=null;S.trace=0;S.identityError='';paint();
+  };
+  DRAW.functions=()=>{
+    let html=oldFn(),cmp=composed();
+    const diagnostics=(label,a,target)=>{const counts=Array.from({length:target},(_,j)=>a.filter(x=>x===j).length);
+      const collisions=counts.flatMap((count,i)=>count>1?[(i+1)+' ('+count+' inputs)']:[]);
+      const omissions=counts.flatMap((count,i)=>count===0?[i+1]:[]);
+      return '<p><strong>'+label+':</strong> '+(collisions.length?'Collisions at outputs '+collisions.join(', '):'No collisions')+'; '+(omissions.length?'unreached outputs '+omissions.join(', '):'every output reached')+'.</p>';
+    };
+    let rings='';const ring=(column,index,color,dashed)=>{const n=[S.n,S.m,S.c][column],x=[165,383,600][column],y=100+(index+.5)*285/n;rings+='<circle cx="'+x+'" cy="'+y+'" r="29" fill="none" stroke="'+color+'" stroke-width="4" '+(dashed?'stroke-dasharray="5 5"':'')+' pointer-events="none"/>';};
+    [[S.f,S.m,1],[S.g,S.c,2]].forEach(([arr,target,col])=>{for(let i=0;i<target;i++){const count=arr.filter(v=>v===i).length;if(count>1)ring(col,i,'#fac276',false);if(!count)ring(col,i,'#f18f91',true);}});
+    html=html.replace('</svg>',rings+'</svg>');
+    html=html.replace('</section>','<div class="mapping-diagnostics"><strong>Mapping properties</strong><div class="mapping-legend">Solid amber ring: multiple inputs. Dashed red ring: output not reached.</div>'+diagnostics('f',S.f,S.m)+diagnostics('g',S.g,S.c)+diagnostics('g ∘ f',cmp,S.c)+(S.identityError?'<p role="alert" class="form-error">'+safe(S.identityError)+'</p>':'')+'</div></section>');
+    return html;
+  };
+
+  // Euclidean division: require a quotient prediction, reveal successive steps only.
+  INIT.euclid=()=>{originalInit.euclid();S.guess='';S.guessFeedback='';};
+  const oldEuclid=originalDraw.euclid;
+  const advance=()=>{S.step=Math.min(tilings(S.a,S.b).length,S.step+1);S.guess='';S.guessFeedback='';paint();};
+  ACTIONS.euclid.euclidNext=()=>{
+    const steps=tilings(S.a,S.b);if(S.step>=steps.length)return;
+    const value=document.getElementById('euclidGuess')?.value.trim()??'';
+    if(value===''||!/^\d+$/.test(value)){S.guessFeedback='Enter an integer quotient before checking.';paint();return;}
+    if(Number(value)!==steps[S.step].q){S.guessFeedback='Not yet. How many squares with side '+steps[S.step].b+' fit into length '+steps[S.step].a+'?';paint();return;}
+    advance();
+  };
+  ACTIONS.euclid.euclidReveal=advance;
+  const oldEuclidActions={...ACTIONS.euclid};
+  ACTIONS.euclid.euclidBack=()=>{oldEuclidActions.euclidBack();S.guess='';S.guessFeedback='';};
+  for(const key of ['euclidRandom','euclidSwap']){const previous=oldEuclidActions[key];ACTIONS.euclid[key]=()=>{previous();S.guess='';S.guessFeedback='';paint()};}
+  ACTIONS.euclid.euclidAll=()=>{oldEuclidActions.euclidAll();S.guess='';S.guessFeedback='';};
+  DRAW.euclid=()=>{
+    let html=oldEuclid(),steps=tilings(S.a,S.b),finished=S.step>=steps.length;
+    html=html.replace(/(<small>gcd<\/small><strong>)\d+(<\/strong>)/,'$1'+(finished?egcd(S.a,S.b).g:'?')+'$2');
+    const first='<div style="margin-top:16px" class="control-label">EUCLIDEAN DIVISION CHAIN</div>';
+    html=html.replace(/(<div style="margin-top:16px" class="control-label">EUCLIDEAN DIVISION CHAIN<\/div>)[\s\S]*?(?=<\/div><aside class="insight-pane")/,(all,head)=>head+steps.slice(0,S.step).map(r=>'<div class="division-line">'+r.a+' = '+r.q+' × '+r.b+' + '+r.r+'</div>').join(''));
+    const prompt=finished?'<p class="math-note">The last nonzero remainder is the gcd. Bézout: '+S.a+'('+egcd(S.a,S.b).x+') + '+S.b+'('+egcd(S.a,S.b).y+') = '+egcd(S.a,S.b).g+'.</p>':'<div class="quotient-prompt"><label for="euclidGuess">Next quotient: '+steps[S.step].a+' ÷ '+steps[S.step].b+' = ?</label><input type="number" min="0" step="1" id="euclidGuess" value="'+safe(S.guess||'')+'" placeholder="Quotient">'+(S.guessFeedback?noticeBox(safe(S.guessFeedback)):'')+'</div>';
+    html=html.replace('data-act="euclidNext"','data-act="euclidNext"');
+    html=html.replace('Tile next rectangle','Check quotient');
+    html=html.replace('<div class="buttons">'+btn('euclidBack','← Previous'),prompt+'<div class="buttons">'+btn('euclidReveal','Show next division')+btn('euclidBack','← Previous'));
+    html=replaceInsight(html,'Euclidean division',finished?'The last nonzero remainder is the gcd. The extended Euclidean algorithm expresses it as a linear combination of the original side lengths.':'At each stage, divide the longer remaining side by the shorter. The quotient gives the number of complete squares; the remainder determines the next rectangle.');
+    return html;
+  };
+  document.addEventListener('input',e=>{if(active==='euclid'&&e.target.id==='euclidGuess')S.guess=e.target.value;});
+
+  // SVG keyboard support for students without a pointing device.
+  window.afterPaint=()=>{
+    originalAfterPaint?.();
+    const stage=$('stage');if(!stage)return;
+    stage.querySelectorAll('[data-node],[data-euleredge],[data-eulernode],[data-cell],[data-peg],[data-functionnode]').forEach(el=>{
+      const node=el.dataset.node,edge=el.dataset.euleredge,peg=el.dataset.peg,cell=el.dataset.cell,fn=el.dataset.functionnode;
+      el.setAttribute('role','button');el.setAttribute('tabindex','0');
+      el.setAttribute('aria-label',node!==undefined?'Vertex '+letter(Number(node)):edge!==undefined?'Edge '+(Number(edge)+1):peg!==undefined?'Peg '+(Number(peg)+1):cell!==undefined?'Cell '+cell:fn!==undefined?'Mapping element '+fn:'Vertex '+letter(Number(el.dataset.eulernode)));
+      el.addEventListener('keydown',ev=>{
+        if(ev.key!=='Enter'&&ev.key!==' ')return;ev.preventDefault();
+        if(active==='color'&&node!==undefined){const id=Number(node);if(S.edgeMode){if(S.selected===null)S.selected=id;else if(S.selected!==id){saveGraph();const a=Math.min(id,S.selected),b=Math.max(id,S.selected),i=S.e.findIndex(x=>x[0]===a&&x[1]===b);if(i<0)S.e.push([a,b]);else S.e.splice(i,1);S.colors.fill(-1);S.selected=null;S.showMinimum=false;}else S.selected=null;}else{saveGraph();S.colors[id]=S.activeColor;}paint();return;}
+        el.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+      });
+    });
+  };
+  // Apply new controls to the currently shown topic without resetting its problem.
+  if(active==='home')render();else {if(active==='color'){S.activeColor=0;S.undo=[];S.showMinimum=false;S.tip='';}if(active==='logic'){S.seen=new Set();S.checkAll=false;}paint();}
+})();
