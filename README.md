@@ -28,11 +28,11 @@ Every topic has **New problem**, a difficulty selector (Easy / Medium / Hard), a
 
 Resetting restores the original generated configuration, including its random seed. Existing preset examples remain available.
 
-The generator is in `practice.js` and the controls are styled by `practice.css`. They require no external APIs or server.
+The mathematical activities, deterministic generators, and interaction controls are consolidated into `app.js`; the problem controls are styled by `practice.css`. No external APIs or server are required.
 
 ## Deployment
 
-Static HTML, CSS, and JavaScript (including `practice.js` and `practice.css`). GitHub Pages publishes automatically on commits to `main` using `.github/workflows/deploy.yml`. No build process or server is required.
+Static HTML, CSS, and one JavaScript application bundle (`app.js`). Before deploying each change, the GitHub Actions workflow checks JavaScript syntax and runs the regression suite in `tests/site.test.cjs`. No build process or server is required.
 
 ## Textbook reference
 
