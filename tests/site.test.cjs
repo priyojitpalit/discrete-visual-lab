@@ -9,7 +9,7 @@ const bundle=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const practiceMarker='/* Discrete Mathematics — reproducible problem generators.';
 const improvementsMarker="'use strict';\n// Course activity improvements:";
 let app=bundle,practice,improvements;
-if(fs.existsSync(path.join(root,'practice.js'))){
+if(!bundle.includes(practiceMarker)&&fs.existsSync(path.join(root,'practice.js'))){
   practice=fs.readFileSync(path.join(root,'practice.js'),'utf8');
   improvements=fs.readFileSync(path.join(root,'improvements.js'),'utf8');
 }else{
