@@ -46,26 +46,18 @@ function highlightNav(){
  $("#bookmark-count").textContent=state.saved.size;
 }
 function overview(){
-  const features=[
-    [4,"Teaching & Instruction","The advanced curriculum, classroom practice, course notes, feedback, observations, and teaching materials."],
-    [5,"Service & Program Development","Faculty and college service, student mentoring, academic initiatives, and community outreach."],
-    [6,"Scholarship & Professional Activity","Published and developing work, research projects, and professional learning."],
-    [2,"Independent Reviews","Division reviews, complemented by annual evaluations and additional letters."]
-  ];
-  const journey=[
-    ["01","Letter of application","TENURE-2026-Application-Letter"],
-    ["02","Curriculum vitae","Curriculum Vitae — Priyojit"],
-    ["03","Teaching philosophy","Teaching Philosophy — Tenure"],
-    ["04","Service philosophy","Service Philosophy — Tenure"],
-    ["05","Scholarship philosophy","Scholarship and Professional Activity Philosophy"]
-  ];
-  return '<div class="container">'+(state.partial?'<p class="data-warning">Some original Drive records could not be indexed. Consult the original dossier for complete coverage.</p>':"")+
-  '<section class="intro-hero"><div class="hero-copy"><span class="eyebrow">FACULTY PORTFOLIO · 2022–2026</span><h2>Teaching, building,<br>and learning at Spring Hill.</h2><p>When I arrived in 2022, one of my central tasks was to prepare advanced Computer Science courses for students progressing beyond the introductory sequence. Over four years, the work grew into laboratories, mentoring, program development, research, and service. This portfolio brings that story together with the records that document it.</p><div class="hero-actions"><button class="button primary" data-open-term="TENURE-2026-Application-Letter">Read the application ↗</button><button class="button secondary" data-nav="4">Explore teaching</button></div></div></section>'+
-  '<div class="stats-strip"><div class="stat"><strong>'+state.files.length+'</strong><span>original Drive documents indexed</span></div><div class="stat"><strong>8</strong><span>sections from the source dossier</span></div><div class="stat"><strong>'+state.files.filter(archive).length+'</strong><span>archived source records retained</span></div></div>'+
-  '<div class="section-label-row"><div><span class="eyebrow">EXPLORE THE RECORD</span><h3>The work, and the evidence</h3></div><p>Each document opens in the reader.</p></div>'+
-  '<div class="feature-grid">'+features.map(([i,title,description])=>'<button class="feature-card" data-nav="'+i+'"><span class="small-index">SECTION '+num(i)+'</span><h4>'+esc(title)+'</h4><p>'+esc(description)+'</p><div class="card-bottom"><span>'+sectionCount(i)+' documents</span><span>↗</span></div></button>').join("")+'</div>'+
-  '<div class="guided-path"><section class="path-panel"><span class="eyebrow">A RECOMMENDED READING PATH</span><h3>Start with the account. Follow the evidence.</h3><p>The application supplies the narrative, the philosophies explain the approach, and the evaluations and exhibits provide supporting records.</p><div class="path-list">'+journey.map(([n,title,term])=>'<button class="path-link" data-open-term="'+esc(term)+'"><em>'+n+'</em><span>'+esc(title)+'</span>↗</button>').join("")+'</div></section>'+
-  '<section class="notice-panel"><span class="eyebrow">ABOUT THE DOCUMENTS</span><h3>Original records, not copies</h3><p>Every document here points to its existing Spring Hill College Google Drive location, including historical reviews and archived source material. Nothing has been uploaded to Drive or duplicated in the website.</p><p>The built-in preview supports reading without leaving the portfolio when your institution permits it. Otherwise, open the original file in Drive.</p><button class="button secondary" data-nav="3">See annual evaluations ↗</button></section></div></div>';
+ const priority=[
+  ["Application letter","Read the tenure application","TENURE-2026-Application-Letter"],
+  ["Curriculum vitae","View qualifications and experience","Curriculum Vitae — Priyojit"]
+ ];
+ const order=[1,4,5,6,3,2,7,0];
+ return '<div class="container simple-home">'+
+ (state.partial?'<p class="data-warning">Some source folders could not be indexed. Refer to the original Drive dossier for complete coverage.</p>':"")+
+ '<div class="simple-heading"><span class="eyebrow">SPRING HILL COLLEGE · 2026</span><h2>Tenure & Promotion Portfolio</h2><p>Priyojit Palit · Mathematics & Computer Science</p></div>'+
+ '<div class="quick-documents">'+priority.map(([title,subtitle,term])=>'<button class="quick-document" data-open-term="'+esc(term)+'"><span class="quick-icon">▤</span><span><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></span><span class="quick-arrow">↗</span></button>').join("")+'</div>'+
+ '<div class="directory-header"><h3>Browse the dossier</h3><span>'+state.files.length+' documents · 8 sections</span></div>'+
+ '<div class="directory-grid">'+order.map(i=>{const s=SECTIONS[i];return '<button class="directory-card" data-nav="'+i+'"><span class="directory-number">'+num(i)+'</span><span class="directory-copy"><strong>'+esc(s.name)+'</strong><small>'+sectionCount(i)+' documents</small></span><span class="directory-arrow">→</span></button>'}).join("")+'</div>'+
+ '<p class="directory-footnote">Select a section to browse its documents or use Search above to find a specific item. Documents open in the reader, with a link to the original file in Google Drive.</p></div>';
 }
 function typeOf(f){
  const m=f.mime||"";
