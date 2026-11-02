@@ -183,3 +183,20 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #9a73
 .directory-arrow{font-size:18px}
 .directory-footnote{margin:24px 0;color:#7b858e;font-size:12px;line-height:1.7}
 @media(max-width:800px){.simple-home{padding-top:26px}.directory-grid,.quick-documents{grid-template-columns:1fr}.directory-card{min-height:73px}.directory-header{align-items:baseline}.directory-header span{font-size:10px}}
+
+/* Folder-first accordion navigation */
+details.folder-group{overflow:hidden}
+details.folder-group > summary{list-style:none;cursor:pointer}
+details.folder-group > summary::-webkit-details-marker{display:none}
+details.folder-group > summary:hover{background:#faf7fc}
+.folder-title{display:flex;align-items:center;gap:13px;min-width:0}
+.folder-title strong{font:normal 20px/1.3 Georgia,serif;color:var(--ink)}
+.folder-title small{display:block;margin-top:3px;color:#87919a;font-size:11px}
+.folder-chevron{display:inline-grid;place-items:center;flex:0 0 27px;width:27px;height:27px;background:#f1edf6;color:#563b70;border-radius:6px;font-size:24px;line-height:1;transition:transform .2s}
+details.folder-group[open] .folder-chevron{transform:rotate(90deg)}
+.folder-head{gap:14px}
+details.tree-node{display:block;margin-left:15px;border-left:1px solid #e9e8ed;padding-left:13px}
+details.tree-node > summary{list-style:none;cursor:pointer}
+details.tree-node > summary::-webkit-details-marker{display:none}
+details.tree-node > summary:before{content:"›";display:inline-block;margin-right:7px;color:var(--purple-2);transition:transform .15s}
+details.tree-node[open] > summary:before{transform:rotate(90deg)}
