@@ -77,7 +77,7 @@ function groups(files){
  return [...m.entries()].sort((a,b)=>ordered(a[0],b[0]));
 }
 function groupHtml(name,files){
- return '<section class="folder-group"><div class="folder-head"><div><h3>'+esc(name)+'</h3><p>'+((files.length&&files.every(archive))?"Archived primary records":"Original Drive evidence")+'</p></div><span class="folder-count">'+files.length+' files</span></div><div class="doc-list">'+[...files].sort((a,b)=>ordered(a.title,b.title)).map(documentRow).join("")+'</div></section>';
+ return '<details class="folder-group"><summary class="folder-head"><span class="folder-title"><span class="folder-chevron" aria-hidden="true">›</span><span><strong>'+esc(name)+'</strong><small>'+((files.length&&files.every(archive))?"Archived source reports":"Click to view documents")+'</small></span></span><span class="folder-count">'+files.length+' files</span></summary><div class="doc-list">'+[...files].sort((a,b)=>ordered(a.title,b.title)).map(documentRow).join("")+'</div></details>';
 }
 function groupList(files){return groups(files).map(([name,items])=>groupHtml(name,items)).join("")}
 function treeHtml(i){
@@ -86,9 +86,9 @@ function treeHtml(i){
  (s.folders||[]).forEach(f=>node((f.path||[]).slice(1)));
  (s.files||[]).forEach(f=>node((f.path||[]).slice(1,-1)).files.push(f));
  function total(n){return n.files.length+[...n.kids.values()].reduce((sum,x)=>sum+total(x),0)}
- function html(n,rootNode){return '<div class="tree-node '+(rootNode?"root":"")+'">'+(rootNode?"":'<div class="tree-folder">▾ '+esc(n.name)+' <small>('+total(n)+')</small></div>')+
+ function html(n,rootNode){return (rootNode?'<div class="tree-node root">':'<details class="tree-node"><summary class="tree-folder">'+esc(n.name)+' <small>('+total(n)+' files)</small></summary>')+
  [...n.kids.values()].sort((a,b)=>ordered(a.name,b.name)).map(x=>html(x,false)).join("")+
- [...n.files].sort((a,b)=>ordered(a.title,b.title)).map(f=>'<button class="tree-file" data-open="'+esc(f.id)+'">▤ '+esc(f.title)+'</button>').join("")+'</div>'}
+ [...n.files].sort((a,b)=>ordered(a.title,b.title)).map(f=>'<button class="tree-file" data-open="'+esc(f.id)+'">▤ '+esc(f.title)+'</button>').join("")+(rootNode?'</div>':'</details>')}
  return '<div class="tree-view">'+html(root,true)+'</div>';
 }
 function sectionHtml(i){
